@@ -1,15 +1,18 @@
 /* =========================================================================
-   KetoFit — logique applicative
-   PWA mobile-first · localStorage · minuteur · bibliothèque · modale
+   IronBand — logique applicative
+   PWA mobile-first · localStorage · minuteur · bibliothèque · carnet de charges
    ========================================================================= */
 
 'use strict';
 
 /* ------------------------------ Constantes ------------------------------ */
 
-const STORE_KEY = 'ketofit.v1';
-const LEGACY_STORE_KEY = 'kettleband.v1';
-const APP_VERSION = '1.1.0';
+const STORE_KEY = 'ironband.v1';
+const LEGACY_STORE_KEYS = ['ketofit.v1', 'kettleband.v1'];
+const APP_VERSION = '1.2.0';
+
+const GIF_CACHE_NAME = 'ironband-gifs-v1';
+const GIF_URLS = [...new Set(EXERCISES.map((ex) => GIF_BASE + ex.gif))];
 
 const DURATIONS = [
   {
@@ -120,7 +123,16 @@ const state = {
   sets: {},
   done: {},
   usage: {},
+  loads: {},
   installHidden: false
+};
+
+const offline = {
+  total: GIF_URLS.length,
+  cached: 0,
+  failed: 0,
+  running: false,
+  ready: false
 };
 
 function saveState() {
@@ -135,10 +147,13 @@ function loadState() {
   try {
     let raw = localStorage.getItem(STORE_KEY);
     if (!raw) {
-      const legacy = localStorage.getItem(LEGACY_STORE_KEY);
-      if (legacy) {
-        raw = legacy;
-        try { localStorage.setItem(STORE_KEY, legacy); } catch (err) { /* ignore */ }
+      for (const key of LEGACY_STORE_KEYS) {
+        const legacy = localStorage.getItem(key);
+        if (legacy) {
+          raw = legacy;
+          try { localStorage.setItem(STORE_KEY, legacy); } catch (err) { /* ignore */ }
+          break;
+        }
       }
     }
     if (!raw) return;
@@ -152,7 +167,7 @@ function loadState() {
       if (Number.isInteger(saved.quote.last)) state.quote.last = saved.quote.last;
       if (Array.isArray(saved.quote.seen)) state.quote.seen = saved.quote.seen.slice(-12);
     }
-    ['sessions', 'sets', 'done', 'usage'].forEach((k) => {
+    ['sessions', 'sets', 'done', 'usage', 'loads'].forEach((k) => {
       if (saved[k] && typeof saved[k] === 'object') state[k] = saved[k];
     });
     if (saved.installHidden === true) state.installHidden = true;
@@ -179,6 +194,131 @@ function pruneOldWeeks() {
       const week = key.split('|')[0];
       if (!allowed.has(week)) delete state[bucket][key];
     });
+  });
+}
+
+/* ---------------------------- Carnet de charges -------------------------- */
+
+const noteTimers = {};
+
+function bandById(id) {
+  return BAND_LOADS.find((b) => b.id === id) || null;
+}
+
+function currentLoad(exId) {
+  return state.loads[exId] || null;
+}
+
+function loadLabel(load) {
+  if (!load || load.v == null) return '';
+  if (load.eq === 'kb') return `KB ${load.v} kg`;
+  const band = bandById(load.v);
+  return band ? `Bande ${band.label}` : 'Bande';
+}
+
+function loadDateLabel(dateStr) {
+  if (!dateStr) return '';
+  if (dateStr === dateKey()) return 'aujourd’hui';
+  const d = new Date(`${dateStr}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(d);
+}
+
+function loadBadgeInner(load) {
+  const label = loadLabel(load);
+  if (!label) return 'Première fois · note ta charge';
+  return `Dernière fois : <b>${esc(label)}</b> <span class="ll-date">· ${esc(loadDateLabel(load.date))}</span>`;
+}
+
+function loadChipsHTML(ex, load) {
+  if (ex.equipment === 'kb') {
+    return KB_LOADS.map((kg) => {
+      const active = load && load.v === kg;
+      return `<button type="button" class="load-chip ${active ? 'is-active' : ''}" data-act="load" data-ex="${ex.id}" data-v="${kg}" aria-pressed="${active}"><span class="dot" style="background:#ffb02e"></span>${kg} kg</button>`;
+    }).join('');
+  }
+  return BAND_LOADS.map((band) => {
+    const active = load && load.v === band.id;
+    return `<button type="button" class="load-chip ${active ? 'is-active' : ''}" data-act="load" data-ex="${ex.id}" data-v="${band.id}" aria-pressed="${active}"><span class="dot" style="background:${band.color}"></span>${band.label} <span class="range">${band.range}</span></button>`;
+  }).join('');
+}
+
+function loadBlockHTML(ex, context = 'card') {
+  const load = currentLoad(ex.id);
+  const hasContent = load && (load.v != null || (typeof load.note === 'string' && load.note.trim()));
+  const clear = hasContent
+    ? `<button type="button" class="load-clear" data-act="clear-load" data-ex="${ex.id}" aria-label="Effacer la charge enregistrée" title="Effacer">×</button>`
+    : '';
+  return `
+    <div class="load-block" data-load-wrap="${ex.id}" data-context="${context}">
+      <div class="load-head">
+        <span class="load-title">Charge</span>
+        <span class="last-load ${load && load.v != null ? '' : 'is-empty'}">${loadBadgeInner(load)}</span>
+      </div>
+      <div class="load-chips" role="group" aria-label="Choisir la charge pour ${esc(ex.name)}">
+        ${loadChipsHTML(ex, load)}
+      </div>
+      <div class="load-note-row">
+        <input class="load-note-input" type="text" maxlength="80" data-ex="${ex.id}"
+          value="${esc(load && load.note ? load.note : '')}"
+          placeholder="Reps exactes / remarque (ex. 10 reps propres)"
+          aria-label="Note de charge pour ${esc(ex.name)}" autocomplete="off">
+        ${clear}
+      </div>
+    </div>`;
+}
+
+function refreshLoadUI(exId) {
+  const ex = byId[exId];
+  if (!ex) return;
+  $all(`[data-load-wrap="${exId}"]`).forEach((wrap) => {
+    const context = wrap.dataset.context || 'card';
+    wrap.outerHTML = loadBlockHTML(ex, context);
+  });
+}
+
+function saveLoad(exId, value) {
+  const ex = byId[exId];
+  if (!ex) return;
+  const prev = state.loads[exId] || {};
+  const liveInput = document.querySelector(`.load-note-input[data-ex="${exId}"]`);
+  const note = liveInput ? liveInput.value.slice(0, 80) : (typeof prev.note === 'string' ? prev.note : '');
+  state.loads[exId] = {
+    eq: ex.equipment,
+    v: value,
+    note,
+    date: dateKey(),
+    ts: Date.now()
+  };
+  saveState();
+  refreshLoadUI(exId);
+}
+
+function clearLoad(exId) {
+  if (!state.loads[exId]) return;
+  delete state.loads[exId];
+  saveState();
+  refreshLoadUI(exId);
+}
+
+function saveLoadNote(exId, note) {
+  const ex = byId[exId];
+  if (!ex) return;
+  const clean = String(note).slice(0, 80);
+  const prev = state.loads[exId];
+  if (!prev && !clean.trim()) return;
+  state.loads[exId] = {
+    eq: ex.equipment,
+    v: prev ? prev.v : null,
+    note: clean,
+    date: dateKey(),
+    ts: Date.now()
+  };
+  saveState();
+  $all(`[data-load-wrap="${exId}"] .last-load`).forEach((badge) => {
+    const load = state.loads[exId];
+    badge.innerHTML = loadBadgeInner(load);
+    badge.classList.toggle('is-empty', !loadLabel(load));
   });
 }
 
@@ -416,9 +556,9 @@ function renderWeekBadge() {
 
 /* --------------------------- Rendu : exercices --------------------------- */
 
-function gifTag(ex, cls, altSuffix = '') {
+function gifTag(ex, cls, altSuffix = '', context = 'card') {
   const alt = `Démonstration animée : ${ex.name}${altSuffix}`;
-  return `<img class="${cls}" src="${GIF_BASE}${ex.gif}" alt="${esc(alt)}" loading="lazy" decoding="async" onerror="ketofitGifFallback(this)">`;
+  return `<img class="${cls}" src="${GIF_BASE}${ex.gif}" alt="${esc(alt)}" loading="lazy" decoding="async" data-ex="${ex.id}" data-context="${context}" onerror="ironbandGifFallback(this)">`;
 }
 
 function exerciseCardHTML(ex, idx, duration, key) {
@@ -448,6 +588,7 @@ function exerciseCardHTML(ex, idx, duration, key) {
             aria-pressed="${on}" aria-label="Série ${i + 1} de ${esc(ex.name)}">${on ? '✓' : i + 1}</button>
         `).join('')}
       </div>
+      ${loadBlockHTML(ex, 'card')}
       <div class="ex-foot">
         <button type="button" class="link-btn" data-act="technique" data-id="${ex.id}">
           <span aria-hidden="true">ⓘ</span> Technique &amp; charge
@@ -666,6 +807,16 @@ function renderWeek() {
         <li>Le repos n’est pas une option : 3 jours par semaine, tu laisses le muscle pousser.</li>
       </ul>
     </div>
+    <button type="button" class="offline-row" data-act="offline">
+      <span class="or-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 18h9a4 4 0 0 0 .6-7.96A6 6 0 0 0 5.1 11.2 3.5 3.5 0 0 0 7 18Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10.5v6m0 0 2.2-2.2M12 16.5l-2.2-2.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <span class="or-text">
+        <b>GIFs hors-ligne</b>
+        <small class="offline-count">${offline.cached} / ${offline.total} GIFs en cache</small>
+      </span>
+      <span class="or-arrow" aria-hidden="true">›</span>
+    </button>
     <button type="button" class="reset-btn" id="resetBtn">Réinitialiser mes données locales</button>
   `;
 }
@@ -747,7 +898,9 @@ function openTechnique(id) {
           </div>
         </div>
 
-        ${gifTag(ex, 'gif-large')}
+        ${gifTag(ex, 'gif-large', '', 'modal')}
+
+        ${loadBlockHTML(ex, 'modal')}
 
         <div class="info-block ${isBand ? 'band-accent' : ''}">
           <h3>Position de départ</h3>
@@ -802,7 +955,7 @@ function openInstallModal() {
         <div class="sheet-head">
           <div>
             <div class="ex-badges"><span class="badge kb">PWA</span><span class="badge soft">Chrome Android</span></div>
-            <h2 id="installTitle">Installer KetoFit</h2>
+            <h2 id="installTitle">Installer IronBand</h2>
             <p class="sheet-sub">Plein écran, icône sur l’écran d’accueil et fonctionnement hors-ligne.</p>
           </div>
         </div>
@@ -813,7 +966,7 @@ function openInstallModal() {
             <li>Ouvre l’adresse du site dans <b>Google Chrome</b>.</li>
             <li>Appuie sur le menu <b>⋮</b> en haut à droite.</li>
             <li>Choisis <b>« Installer l’application »</b> (ou « Ajouter à l’écran d’accueil »).</li>
-            <li>Confirme : l’icône KetoFit apparaît sur ton écran d’accueil.</li>
+            <li>Confirme : l’icône IronBand apparaît sur ton écran d’accueil.</li>
           </ol>
           <p style="margin-top:8px;font-size:12.5px">Sur ordinateur, utilise l’icône d’installation <b>⊕</b> à droite de la barre d’adresse.</p>
         </div>
@@ -1380,7 +1533,7 @@ function renderGuided() {
           <span class="badge ${ex.equipment === 'kb' ? 'kb' : 'band'}">${equLabel}</span>
           <span class="badge soft">${esc(ex.group)}</span>
         </div>
-        ${gifTag(ex, 'guided-gif')}
+        ${gifTag(ex, 'guided-gif', '', 'guided')}
         <h2 class="guided-name">${esc(ex.name)}</h2>
         <p class="guided-serie" role="status">Série ${guided.set + 1} / ${dur.sets}</p>
         <div class="guided-meta"><span><b>${esc(ex.reps)}</b></span><span>Repos ${dur.rest} s</span></div>
@@ -1440,6 +1593,185 @@ function renderGuided() {
   if (primary) primary.focus({ preventScroll: true });
 }
 
+/* ----------------------------- Mode hors-ligne --------------------------- */
+
+function updateOfflineIndicators() {
+  const percent = offline.total ? Math.round((offline.cached / offline.total) * 100) : 0;
+  const dot = $('#offlineDot');
+  if (dot) dot.hidden = offline.total === 0 || offline.cached >= offline.total;
+  const btn = $('#offlineBtn');
+  if (btn) {
+    btn.classList.toggle('is-busy', offline.running);
+    btn.title = `GIFs hors-ligne : ${offline.cached}/${offline.total} en cache`;
+  }
+  $all('.offline-count').forEach((el) => {
+    el.textContent = `${offline.cached} / ${offline.total} GIFs en cache`;
+  });
+  const bar = $('#offlineBar');
+  if (bar) bar.style.width = `${percent}%`;
+  const count = $('#offlineCount');
+  if (count) count.textContent = `${offline.cached} / ${offline.total}`;
+  const status = $('#offlineStatus');
+  const startBtn = $('#offlineStart');
+  if (status) {
+    if (offline.running) {
+      status.innerHTML = `<b>Téléchargement en cours…</b> ${offline.cached} / ${offline.total} GIFs. Garde l’app ouverte.`;
+    } else if (offline.failed > 0) {
+      status.innerHTML = `<b>${offline.failed} GIF(s) n’ont pas pu être téléchargés.</b> Vérifie ta connexion puis relance.`;
+    } else if (offline.cached >= offline.total) {
+      status.innerHTML = `<b>Tous les GIFs sont disponibles hors-ligne ✓</b> Tu peux t’entraîner sans réseau.`;
+    } else {
+      status.innerHTML = `<b>${offline.total - offline.cached} GIF(s) restent à télécharger.</b> Garde l’app ouverte pendant l’opération.`;
+    }
+  }
+  if (startBtn) {
+    startBtn.disabled = offline.running || offline.cached >= offline.total;
+    startBtn.textContent = offline.running
+      ? `Téléchargement… ${offline.cached}/${offline.total}`
+      : offline.cached >= offline.total
+        ? 'Tout est prêt ✓'
+        : '📥 Télécharger les GIFs hors-ligne';
+  }
+}
+
+async function countCachedGifs() {
+  try {
+    if (!('caches' in window)) { offline.ready = true; return; }
+    const cache = await caches.open(GIF_CACHE_NAME);
+    const keys = await cache.keys();
+    const urls = new Set(keys.map((r) => r.url));
+    offline.cached = GIF_URLS.filter((u) => urls.has(u)).length;
+    offline.ready = true;
+  } catch (err) {
+    offline.ready = true;
+  }
+  updateOfflineIndicators();
+}
+
+function openOfflineModal() {
+  const modalRoot = $('#modalRoot');
+  modalRoot.innerHTML = `
+    <div class="modal" id="offlineModal" role="dialog" aria-modal="true" aria-labelledby="offlineTitle">
+      <div class="sheet">
+        <button type="button" class="sheet-close" data-act="close-modal" aria-label="Fermer">✕</button>
+        <div class="sheet-head">
+          <div>
+            <div class="ex-badges"><span class="badge band">Hors-ligne</span><span class="badge soft">GIFs</span></div>
+            <h2 id="offlineTitle">Démonstrations sans réseau</h2>
+            <p class="sheet-sub">Toute la bibliothèque en cache pour t’entraîner sans 4G.</p>
+          </div>
+        </div>
+        <div class="offline-hero">
+          <div class="offline-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 4v10m0 0 4-4m-4 4-4-4M6 18h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="offline-stats">
+            <b id="offlineCount">${offline.cached} / ${offline.total}</b>
+            <span>GIFs en cache sur cet appareil</span>
+          </div>
+        </div>
+        <div class="offline-bar"><span id="offlineBar" style="width:0%"></span></div>
+        <p class="offline-status" id="offlineStatus"></p>
+        <div class="offline-actions">
+          <button type="button" class="primary-btn" id="offlineStart" data-act="download-gifs">📥 Télécharger les GIFs hors-ligne</button>
+        </div>
+        <p class="offline-note"><b>Comment ça marche :</b> les GIFs proviennent de GitHub. Une fois téléchargés, ils sont stockés durablement sur ton téléphone et s’affichent même sans réseau. La première visite d’un GIF le met déjà en cache automatiquement.</p>
+      </div>
+    </div>`;
+  document.body.classList.add('modal-open');
+  updateOfflineIndicators();
+  countCachedGifs();
+  const close = $('.sheet-close', modalRoot);
+  if (close) close.focus({ preventScroll: true });
+}
+
+async function downloadGifs() {
+  if (offline.running) return;
+  if (!('caches' in window)) {
+    toast('Le cache hors-ligne n’est pas disponible dans ce navigateur.');
+    return;
+  }
+  offline.running = true;
+  offline.failed = 0;
+  updateOfflineIndicators();
+
+  try {
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+      await navigator.storage.persist().catch(() => {});
+    }
+  } catch (err) { /* ignore */ }
+
+  let cache;
+  try {
+    cache = await caches.open(GIF_CACHE_NAME);
+  } catch (err) {
+    offline.running = false;
+    updateOfflineIndicators();
+    toast('Impossible d’ouvrir le cache hors-ligne.');
+    return;
+  }
+
+  let have = new Set();
+  try {
+    const keys = await cache.keys();
+    have = new Set(keys.map((r) => r.url));
+  } catch (err) { /* ignore */ }
+  const queue = GIF_URLS.filter((u) => !have.has(u));
+
+  if (!queue.length) {
+    offline.cached = offline.total;
+    offline.running = false;
+    updateOfflineIndicators();
+    toast('Tous les GIFs sont déjà hors-ligne ✓');
+    return;
+  }
+
+  let cursor = 0;
+  const worker = async () => {
+    while (true) {
+      const i = cursor++;
+      if (i >= queue.length) return;
+      const url = queue[i];
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (res && (res.ok || res.type === 'opaque')) {
+          try {
+            await cache.put(url, res.clone());
+            offline.cached += 1;
+          } catch (err) {
+            offline.failed += 1;
+          }
+        } else {
+          offline.failed += 1;
+        }
+      } catch (err) {
+        offline.failed += 1;
+      }
+      updateOfflineIndicators();
+    }
+  };
+
+  const concurrency = Math.min(4, queue.length);
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+
+  try {
+    const keys = await cache.keys();
+    const urls = new Set(keys.map((r) => r.url));
+    offline.cached = GIF_URLS.filter((u) => urls.has(u)).length;
+  } catch (err) { /* ignore */ }
+
+  offline.running = false;
+  updateOfflineIndicators();
+  if (offline.cached >= offline.total) {
+    toast('Tous les GIFs sont disponibles hors-ligne 📥');
+  } else if (offline.failed > 0) {
+    toast(`${offline.failed} GIF(s) en échec — relance le téléchargement.`);
+  } else {
+    toast(`${offline.cached}/${offline.total} GIFs en cache.`);
+  }
+  vibrate([80, 40, 80]);
+}
+
 /* -------------------------------- Installation --------------------------- */
 
 let deferredPrompt = null;
@@ -1466,7 +1798,7 @@ async function handleInstallClick() {
         state.installHidden = true;
         saveState();
         updateInstallButton();
-        toast('KetoFit s’installe…');
+        toast('IronBand s’installe…');
       }
     } catch (err) {
       openInstallModal();
@@ -1526,6 +1858,24 @@ function bindEvents() {
       case 'technique':
         openTechnique(target.dataset.id);
         break;
+      case 'load': {
+        const exId = target.dataset.ex;
+        const ex = byId[exId];
+        if (ex) {
+          const isNumeric = ex.equipment === 'kb';
+          saveLoad(exId, isNumeric ? Number(target.dataset.v) : target.dataset.v);
+        }
+        break;
+      }
+      case 'clear-load':
+        clearLoad(target.dataset.ex);
+        break;
+      case 'offline':
+        openOfflineModal();
+        break;
+      case 'download-gifs':
+        downloadGifs();
+        break;
       case 'guided':
         startGuided();
         break;
@@ -1569,6 +1919,14 @@ function bindEvents() {
       default:
         break;
     }
+  });
+
+  document.addEventListener('input', (event) => {
+    const input = event.target.closest('.load-note-input');
+    if (!input) return;
+    const exId = input.dataset.ex;
+    clearTimeout(noteTimers[exId]);
+    noteTimers[exId] = setTimeout(() => saveLoadNote(exId, input.value), 350);
   });
 
   document.addEventListener('keydown', (event) => {
@@ -1648,7 +2006,7 @@ function bindEvents() {
     state.installHidden = true;
     saveState();
     updateInstallButton();
-    toast('KetoFit installée ✓');
+    toast('IronBand installée ✓');
   });
 
   // Retour au premier plan : on rafraîchit la séance du jour
@@ -1685,18 +2043,46 @@ function init() {
   showView('seance');
   bindEvents();
   registerServiceWorker();
+  countCachedGifs();
   document.documentElement.dataset.appVersion = APP_VERSION;
   if (isStandalone()) document.documentElement.dataset.standalone = 'true';
 }
 
-// Image de secours si un GIF met trop de temps ou échoue
-window.ketofitGifFallback = function ketofitGifFallback(img) {
+// Secours visuel : GIF absent du cache et réseau indisponible
+const FALLBACK_ICON = `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8v8M4 9v6M17 8v8M20 9v6M7 12h10"/></svg>`;
+
+function exerciseFallbackNode(ex, context) {
+  const box = document.createElement('div');
+  if (context === 'modal') {
+    box.className = 'gif-fallback-large';
+    box.innerHTML = `
+      <div class="fb-head">${FALLBACK_ICON}<span>Démo GIF indisponible hors-ligne</span></div>
+      <p class="fb-setup"><b>Position de départ :</b> ${esc(ex.setup)}</p>
+      <p><b>Exécution :</b></p>
+      <ol>${ex.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>`;
+  } else if (context === 'guided') {
+    box.className = 'gif-fallback';
+    box.innerHTML = `${FALLBACK_ICON}<span>Démo hors-ligne<br>fiche Technique</span>`;
+  } else {
+    box.className = 'gif-fallback';
+    box.innerHTML = `${FALLBACK_ICON}<span>Hors-ligne</span>`;
+  }
+  return box;
+}
+
+window.ironbandGifFallback = function ironbandGifFallback(img) {
   if (!img || img.dataset.fallbackApplied) return;
   img.dataset.fallbackApplied = '1';
-  img.classList.add('gif-failed');
-  img.removeAttribute('onerror');
-  img.src = FALLBACK_GIF;
-  img.alt = 'Aperçu indisponible — consulte la fiche technique';
+  const ex = byId[img.dataset.ex];
+  if (!ex) {
+    img.classList.add('gif-failed');
+    img.removeAttribute('onerror');
+    img.src = FALLBACK_GIF;
+    img.alt = 'Aperçu indisponible — consulte la fiche technique';
+    return;
+  }
+  const context = img.dataset.context || 'card';
+  img.replaceWith(exerciseFallbackNode(ex, context));
 };
 
 init();

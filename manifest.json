@@ -1,7 +1,7 @@
 {
-  "name": "KetoFit — Prise de masse",
-  "short_name": "KetoFit",
-  "description": "KetoFit : programme hybride de prise de masse, 70 % kettlebell et 30 % bandes élastiques. 50 exercices, séances guidées de 15 à 60 minutes, suivi local et mode hors-ligne.",
+  "name": "IronBand — Prise de masse",
+  "short_name": "IronBand",
+  "description": "IronBand : programme hybride de prise de masse, 70 % kettlebell et 30 % bandes élastiques. 50 exercices, carnet de charges, séances guidées de 15 à 60 minutes et GIFs hors-ligne.",
   "lang": "fr",
   "dir": "ltr",
   "id": "./",

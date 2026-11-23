@@ -1,5 +1,5 @@
 /* =========================================================================
-   KetoFit — Données éditoriales
+   IronBand — Données éditoriales
    Prise de masse · 70 % Kettlebell / 30 % Bandes élastiques
    50 exercices réels · 21 phrases de motivation · plans 7 jours
    Démo GIF : dataset hasaneyldrm/exercises-dataset (© Gym visual)
@@ -65,6 +65,19 @@ const COOLDOWN = {
     { t: '2:30 – 3:00', title: 'Respiration diaphragmatique', desc: '5 cycles : 4 s d’inspiration, 6 s d’expiration.' }
   ]
 };
+
+/* -------------------------------------------------------------------------
+   Carnet de charges — sélecteurs rapides
+   ------------------------------------------------------------------------- */
+const KB_LOADS = [8, 12, 16, 20, 24];
+
+const BAND_LOADS = [
+  { id: 'jaune', label: 'Jaune', range: '2–7 kg', color: '#ffd93d' },
+  { id: 'rouge', label: 'Rouge', range: '7–16 kg', color: '#ff4d4d' },
+  { id: 'noire', label: 'Noire', range: '11–30 kg', color: '#343434' },
+  { id: 'violette', label: 'Violette', range: '16–38 kg', color: '#8b5cf6' },
+  { id: 'verte', label: 'Verte', range: '23–57 kg', color: '#3ddc84' }
+];
 
 /* -------------------------------------------------------------------------
    Guide des charges (affiché dans chaque modale Technique)

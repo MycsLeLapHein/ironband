@@ -1,26 +1,27 @@
-# KetoFit
+# IronBand
 
 **Prise de masse · 70 % Kettlebell / 30 % Bandes élastiques**
 
-Application web installable (PWA) conçue pour un programme hybride de prise de masse au kettlebell et aux bandes élastiques. 100 % statique : HTML, CSS et JavaScript, sans build, sans dépendance, prête à être publiée sur GitHub Pages et installée depuis Google Chrome sur Android.
+Application web installable (PWA) pour un programme hybride de prise de masse au kettlebell et aux bandes élastiques. 100 % statique : HTML, CSS, JavaScript, sans build ni dépendance. Conçue pour GitHub Pages et l’installation depuis Google Chrome sur Android.
 
 ---
 
-## 1. Ce que contient l’application
+## 1. Fonctionnalités
 
 | Écran | Contenu |
 |---|---|
-| **Séance** | Séance du jour, 4 durées (15/30/45/60 min), 3 variantes (Semaine A/B/C), bouton « Varier les exercices 🎲 », échauffement et étirements dépliables, coche des séries, validation |
+| **Séance** | Séance du jour, 4 durées (15/30/45/60 min), 3 variantes (Semaine A/B/C), bouton « Varier les exercices 🎲 », échauffement et étirements dépliables, coche des séries, **carnet de charges**, validation |
 | **Séance guidée** | Mode plein écran pas à pas : une série à la fois, GIF en grand, repos automatique, série suivante, bilan et validation |
-| **Programme** | Les 7 jours de la semaine, statut de chaque séance, variantes, 7 règles de prise de masse |
+| **Programme** | Les 7 jours, statut de chaque séance, variantes, 7 règles de prise de masse, accès au téléchargement des GIFs hors-ligne |
 | **Biblio** | 50 exercices filtrables par matériel (Tout / Kettlebell / Bandes), par muscle et par recherche |
-| **Modale Technique** | GIF en grand, position de départ, exécution pas à pas, tempo, erreur de débutant, guide des charges |
-| **Minuteur** | Panneau flottant 45/60/90 s, compte à rebours circulaire, vibration + bip à 0 s |
-| **PWA** | Manifest, icônes, service worker hors-ligne, bouton « Installer l’app » |
+| **Technique** | GIF en grand, **sélecteur de charge**, position de départ, exécution pas à pas, tempo, erreur de débutant, guide des charges |
+| **Hors-ligne** | GIFs en cache-first, pré-téléchargement en un clic avec barre de progression, secours textuel si un GIF manque |
+| **Minuteur** | Panneau flottant 45/60/90 s, anneau, vibration + bip à 0 s |
+| **PWA** | Manifest, icônes, service worker, bouton « Installer l’app », mode standalone |
 
 ### Le mot du jour
 
-21 phrases de motivation uniques (prise de masse, constance, nutrition, dépassement de soi). Une phrase différente s’affiche à chaque ouverture, sans répétition immédiate : le tirage évite la dernière phrase et les dernières déjà vues (mémorisées dans `localStorage`). Le bouton ↻ permet de passer à la suivante.
+21 phrases uniques (prise de masse, constance, nutrition, dépassement). Une phrase différente à chaque ouverture, sans répétition immédiate, mémorisée dans `localStorage`. Bouton ↻ pour passer à la suivante.
 
 ### Durées et volumes
 
@@ -31,201 +32,205 @@ Application web installable (PWA) conçue pour un programme hybride de prise de 
 | **45 min** (Complet) | 6 | 4 Kettlebell + 2 Bandes | 4 | 90 s |
 | **60 min** (Volume max) | 8 | 5 Kettlebell + 3 Bandes | 4 | 90–120 s |
 
-Chaque séance respecte la structure **Bloc 1 · Kettlebell (force & volume)** puis **Bloc 2 · Bandes élastiques (congestion & isolation)**.
+Structure constante : **Bloc 1 · Kettlebell (force & volume)** puis **Bloc 2 · Bandes (congestion & isolation)**.
 
 ### Planification
 
-- **Jour 1 — Lundi** : Haut du corps, poussée (pectoraux, épaules, triceps)
-- **Jour 2 — Mardi** : Bas du corps & chaîne postérieure (cuisses, fessiers, lombaires)
-- **Jour 3 — Mercredi** : Repos actif
-- **Jour 4 — Jeudi** : Haut du corps, tirage (dos, arrière d’épaule, biceps)
-- **Jour 5 — Vendredi** : Full body, épaules & bras
-- **Jour 6 & 7 — Samedi/Dimanche** : Repos
+- **Lundi** : Haut du corps, poussée (pectoraux, épaules, triceps)
+- **Mardi** : Bas du corps & chaîne postérieure (cuisses, fessiers, lombaires)
+- **Mercredi** : Repos actif
+- **Jeudi** : Haut du corps, tirage (dos, arrière d’épaule, biceps)
+- **Vendredi** : Full body, épaules & bras
+- **Samedi / Dimanche** : Repos
 
-Les exercices sont piochés dans la bibliothèque selon la cible musculaire de chaque emplacement. Un compteur d’utilisation privilégie les exercices les moins récemment vus, et un contrôle évite de répéter le même mouvement dans les deux blocs.
+Les exercices sont piochés selon la cible musculaire, avec un compteur d’utilisation et une protection contre les doublons de mouvement entre les deux blocs.
 
-### Mode séance guidée (plein écran)
+### Mode séance guidée
 
-Le bouton **« ▶ Mode séance guidée »** (sous le titre de la séance) lance un parcours pas à pas :
+Bouton **« ▶ Mode séance guidée »** sous le titre de la séance :
 
-- demande le **plein écran** (si le navigateur l’autorise) et un **Wake Lock** pour garder l’écran allumé ;
-- reprend à la **première série non cochée**, puis affiche une série à la fois : GIF en grand, nom, « Série 2 / 4 », répétitions, tempo et conseil de charge ;
-- **« Série terminée »** coche la série, lance un **repos décompté en anneau** (avec « +15 s » et « Passer le repos »), puis enchaîne automatiquement sur la série suivante puis l’exercice suivant ;
-- « Passer la série » avance sans la cocher ; la croix ou `Échap` quitte à tout moment ;
-- à la fin : bilan séries/exercices/format, puis **« Valider ma séance »** ou fermeture sans valider.
-
-Toutes les cases cochées en mode guidé se retrouvent dans la séance normale.
-
-### Logo et identité
-
-Le logo fourni (`icons/ketofit-mark.png`, décliné en icônes PWA 192/512/maskable et apple-touch) remplace l’ancien visuel : kettlebell noire, bande orange, arc orange → vert. L’en-tête reprend le nom **KetoFit** (Keto blanc, Fit orange italique) et le sous-titre du programme.
+- reprend à la **première série non cochée** ;
+- demande le **plein écran** et un **Wake Lock** (écran allumé) si le navigateur l’autorise ;
+- affiche une série à la fois (GIF, nom, « Série 2 / 4 », répétitions, tempo, charge conseillée) ;
+- **« Série terminée »** coche la série, lance le repos en anneau (« +15 s », « Passer le repos ») puis enchaîne ;
+- « Passer la série » avance sans cocher ; `Échap` ou ✕ quitte ;
+- bilan final et validation.
 
 ---
 
-## 2. Déploiement sur GitHub Pages
+## 2. Carnet de charges (surcharge progressive)
 
-Aucun outil à installer, aucun build.
+Chaque carte d’exercice **et** la fiche Technique proposent un sélecteur rapide, pensé pour le pouce :
 
-1. Crée un dépôt public sur GitHub, par exemple `ketofit`.
-2. Dépose **tout le contenu de ce dossier** à la racine du dépôt (`index.html` doit être à la racine, pas dans un sous-dossier).
-3. Dans le dépôt : **Settings → Pages**.
-4. Source : **Deploy from a branch**. Branche : `main`. Dossier : `/ (root)`. Enregistre.
-5. Attends une à deux minutes : l’adresse s’affiche en haut de la page, du type
-   `https://<ton-pseudo>.github.io/ketofit/`.
-6. Ouvre cette adresse en **HTTPS** sur ton téléphone. Le HTTPS est obligatoire pour que Chrome propose l’installation et pour que le service worker fonctionne.
+- **Kettlebell** : `8 kg`, `12 kg`, `16 kg`, `20 kg`, `24 kg`.
+- **Bande** : `Jaune (2–7 kg)`, `Rouge (7–16 kg)`, `Noire (11–30 kg)`, `Violette (16–38 kg)`, `Verte (23–57 kg)`.
+- Un champ texte court (facultatif) pour noter les répétitions exactes ou une remarque (`10 reps propres`, `RPE 8`…).
 
-> Toutes les URL sont relatives (`./`), l’application fonctionne donc aussi bien à la racine d’un domaine que dans un sous-dossier `/ketofit/`.
+**Mémorisation automatique** dans `localStorage`, indexée par l’identifiant de l’exercice (indépendante de la séance ou de la variante). Dès qu’un exercice revient, un badge affiche :
 
-### Mettre à jour le site
+> Dernière fois : **KB 12 kg** · aujourd’hui
+>
+> Dernière fois : **Bande Noire** · 12 nov.
 
-Modifie les fichiers, puis incrémente la version du cache en haut de `sw.js` :
+La date est affichée (« aujourd’hui » ou date courte) pour visualiser la progression d’une semaine à l’autre. Un bouton `×` efface la charge enregistrée.
+
+---
+
+## 3. Hors-ligne et GIFs
+
+Les démonstrations proviennent de `https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/...`.
+
+- **Cache dédié** : `ironband-gifs-v1`, alimenté par le service worker en **cache-first**. Un GIF affiché une fois est servi instantanément depuis le téléphone, même sans réseau.
+- **Pré-téléchargement** : bouton discret 📥 dans l’en-tête (et ligne « GIFs hors-ligne » dans Programme). La feuille affiche `X / 49 GIFs en cache`, une barre de progression et un bouton **« Télécharger les GIFs hors-ligne »**. Téléchargement en arrière-plan (4 requêtes parallèles), reprise possible, demande de stockage persistant (`navigator.storage.persist`).
+- **Secours visuel** : si un GIF n’est pas en cache et que le réseau est absent, l’image cassée est remplacée par un encart avec pictogramme d’entraînement. Dans la fiche Technique, l’encart affiche aussi la **position de départ** et l’**exécution pas à pas**.
+
+Le service worker pré-cache l’application (HTML, CSS, JS, manifest, icônes) pour démarrer sans réseau. Incrémenter `CACHE_VERSION` force la mise à jour des fichiers ; le cache GIFs est conservé entre les versions.
+
+---
+
+## 4. Déploiement sur GitHub Pages
+
+1. Crée un dépôt public (par exemple `ironband`).
+2. Dépose **tout le contenu de ce dossier** à la racine (`index.html` à la racine).
+3. **Settings → Pages** → **Deploy from a branch** → branche `main`, dossier `/ (root)` → Save.
+4. Ouvre `https://<ton-pseudo>.github.io/ironband/` en **HTTPS**.
+
+Toutes les URL sont relatives (`./`) : l’app fonctionne à la racine d’un domaine comme dans un sous-dossier.
+
+### Mettre à jour
+
+Modifie les fichiers puis incrémente la version du cache en haut de `sw.js` :
 
 ```js
-const CACHE_VERSION = 'ketofit-v1.1.0';
+const CACHE_VERSION = 'ironband-v1.2.1';
 ```
 
-Le service worker supprime l’ancien cache au prochain chargement. Incrémenter cette valeur force la mise à jour des fichiers de l’application chez tous les utilisateurs.
+Le service worker supprime les anciens caches au chargement suivant (le cache `ironband-gifs-v1` est conservé).
 
 ---
 
-## 3. Installation sur smartphone
+## 5. Installation sur smartphone
 
 ### Chrome / Android
 
-1. Ouvre le site dans **Google Chrome** (en HTTPS).
-2. Appuie sur le menu **⋮** en haut à droite.
-3. Choisis **« Installer l’application »** ou **« Ajouter à l’écran d’accueil »**.
-4. Confirme : KetoFit s’ouvre en plein écran (`display: standalone`) et fonctionne hors-ligne.
+1. Ouvre le site dans **Chrome** (HTTPS obligatoire).
+2. Menu **⋮ → « Installer l’application »** (ou « Ajouter à l’écran d’accueil »).
+3. Confirme : IronBand s’ouvre en plein écran et fonctionne hors-ligne.
 
-Le bouton **« Installer l’app »** du header déclenche l’invite native si elle est disponible, sinon il affiche les instructions en 4 étapes. Sur ordinateur, l’icône ⊕ de la barre d’adresse fait le même travail.
+Le bouton **« Installer l’app »** du header déclenche l’invite native si disponible, sinon affiche les instructions en 4 étapes.
 
 ### iPhone / iPad
 
-Ouvre le site dans **Safari**, appuie sur **Partager**, puis **« Sur l’écran d’accueil »**.
-
-### Hors-ligne
-
-Le service worker pré-cache l’application (HTML, CSS, JS, manifest, icônes). Les GIFs distants sont mis en cache au fur et à mesure de leur consultation : une séance déjà ouverte reste consultable sans réseau, les GIFs jamais vus se chargeront à la prochaine connexion.
+Dans **Safari** : **Partager → « Sur l’écran d’accueil »**.
 
 ---
 
-## 4. Données locales
+## 6. Données locales
 
-Tout est stocké dans le navigateur, sous la clé `ketofit.v1` :
+Clé `ironband.v1` (migration douce depuis `ketofit.v1` et `kettleband.v1`) :
 
-- durée choisie et variante (A/B/C) ;
-- exercices générés pour chaque jour/durée/variante de la semaine ;
+- durée, variante, jour sélectionné ;
+- exercices générés de la semaine ;
 - séries cochées et séances validées ;
-- historique de phrases affichées ;
-- compteur d’utilisation des exercices.
+- **charges et notes par exercice** ;
+- historique des phrases ;
+- compteur d’utilisation.
 
-Aucune donnée n’est envoyée à un serveur. Le bouton **« Réinitialiser mes données locales »** (onglet Programme, en bas) efface tout après confirmation.
-
-> En navigation privée, `localStorage` peut être bloqué : l’application reste utilisable, mais rien n’est conservé après fermeture.
+Aucune donnée n’est envoyée à un serveur. **« Réinitialiser mes données locales »** (Programme, en bas) efface tout après confirmation. En navigation privée, `localStorage` peut être bloqué : l’app reste utilisable en mémoire.
 
 ---
 
-## 5. Bibliothèque et GIFs
+## 7. Bibliothèque et crédits GIFs
 
-- **50 exercices** : 29 kettlebell + 21 bandes, couvrant pectoraux, dos, épaules, bras, jambes/fessiers et gainage.
-- Chaque exercice possède un **GIF de démonstration**, affiché sur la carte et en grand dans la modale, avec une **image SVG de secours** si le chargement échoue (`onerror`).
-- Les GIFs proviennent du dépôt public [`hasaneyldrm/exercises-dataset`](https://github.com/hasaneyldrm/exercises-dataset). **Attention : ce dépôt ne contient pas de dossier `exercises/`** ; les médias sont rangés dans `videos/` (GIF) et `images/` (miniatures), et le nom du fichier est `videos/<id>-<code>.gif`. Les URL utilisées dans `js/data.js` sont donc du type :
+- **50 exercices** : 29 kettlebell + 21 bandes.
+- Le dépôt du dataset **ne contient pas de dossier `exercises/`** : les médias sont dans `videos/` sous la forme `videos/<id>-<code>.gif`. Les URL utilisées dans `js/data.js` sont de ce type :
 
   ```text
   https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/videos/1298-rg59QCH.gif
   ```
 
-- Pour une trentaine de mouvements, le dataset ne propose pas le clip exact (par exemple Squeeze Press, Halo, Face Pull, Skullcrusher au kettlebell). La fiche affiche alors le clip le plus proche, signalé par le badge **« démo proche »** et par la ligne « Démo : … » en bas de la modale. Le nom, les consignes et le tempo restent ceux du mouvement réel.
-- **Crédits obligatoires** : les médias sont © [Gym visual](https://gymvisual.com/), redistribués dans le dataset avec autorisation, à 180 × 180 px. Le crédit « © Gym visual » est conservé dans la modale et dans la bibliothèque. Pour un usage au-delà de la démonstration, consulte les [conditions de Gym visual](https://gymvisual.com/content/3-terms-and-conditions-of-use).
+- Pour une trentaine de mouvements, le clip exact n’existe pas (Squeeze Press, Halo, Face Pull…). La fiche affiche le clip le plus proche, signalé **« démo proche »**. Le nom, les consignes et le tempo restent ceux du mouvement réel.
+- **Médias © [Gym visual](https://gymvisual.com/)**, via le dataset `hasaneyldrm/exercises-dataset`. Le crédit est conservé dans la modale et la bibliothèque. Voir les conditions de Gym visual avant toute réutilisation.
 
 ---
 
-## 6. Structure des fichiers
+## 8. Structure
 
 ```text
-ketofit/
-├── index.html              # interface (header logo, mot du jour, 3 vues, minuteur)
-├── manifest.json           # PWA : nom, icônes, standalone, thème
-├── sw.js                   # service worker (pré-cache + GIFs hors-ligne)
+ironband/
+├── index.html              # interface (header, mot du jour, 3 vues, minuteur, hors-ligne)
+├── manifest.json           # PWA : IronBand, icônes, standalone
+├── sw.js                   # SW : app + cache GIFs ironband-gifs-v1
 ├── css/
-│   └── app.css             # dark mode mobile-first + overlay séance guidée
+│   └── app.css             # dark mode, carnet de charges, guidé, hors-ligne
 ├── js/
-│   ├── data.js             # 21 phrases, 50 exercices, plans 7 jours, échauffement/étirements
-│   └── app.js              # état, génération, minuteur, biblio, modale, séance guidée, PWA
+│   ├── data.js             # phrases, exercices, plans, charges
+│   └── app.js              # état, génération, charges, minuteur, guidé, cache GIFs
 ├── icons/
 │   ├── favicon.svg
-│   ├── ketofit-mark.png    # logo carré pour le header
+│   ├── ironband-mark.png   # logo carré du header
 │   ├── icon-192.png
 │   ├── icon-512.png
 │   ├── maskable-512.png
 │   └── apple-touch-icon.png
-├── .nojekyll               # empêche GitHub Pages d’ignorer certains fichiers
+├── .nojekyll
 ├── LICENSE
 └── README.md
 ```
 
 ---
 
-## 7. Personnalisation
+## 9. Personnalisation
 
-### Ajouter ou modifier un exercice
+### Exercice
 
-Tout est dans `js/data.js`, tableau `EXERCISES` :
+Dans `js/data.js`, tableau `EXERCISES` :
 
 ```js
 {
-  id: 'kb-goblet-squat',          // identifiant unique
-  name: 'Goblet Squat',           // nom affiché
+  id: 'kb-goblet-squat',
+  name: 'Goblet Squat',
   equipment: 'kb',                // 'kb' ou 'band'
-  focus: 'quads',                 // cible utilisée par le générateur
-  group: 'Jambes & Fessiers',     // filtre de la bibliothèque
-  gif: 'videos/0534-ZA8b5hc.gif', // chemin relatif au dépôt du dataset
+  focus: 'quads',                 // cible du générateur
+  group: 'Jambes & Fessiers',     // filtre bibliothèque
+  gif: 'videos/0534-ZA8b5hc.gif',
   source: 'Kettlebell Goblet Squat',
   proxy: false,                   // true → badge « démo proche »
   reps: '10–15',
-  charge: 'Conseil de charge personnalisé…',
+  charge: 'Conseil de charge…',
   setup: 'Position de départ…',
-  steps: ['Étape 1', 'Étape 2', 'Étape 3', 'Étape 4'],
-  tempo: 'Descente 3 s · pause 1 s · montée 1 s',
-  mistake: 'L’erreur de débutant à éviter…'
+  steps: ['Étape 1', '…'],
+  tempo: 'Descente 3 s · montée 1 s',
+  mistake: 'Erreur de débutant…'
 }
 ```
 
-Cibles (`focus`) reconnues par les plans : `chest`, `back`, `shoulders`, `rear_delts`, `biceps`, `triceps`, `quads`, `hamstrings`, `glutes`, `core`.
+Cibles : `chest`, `back`, `shoulders`, `rear_delts`, `biceps`, `triceps`, `quads`, `hamstrings`, `glutes`, `core`.
 
-Ajoute un exercice de même `equipment` + `focus` qu’un emplacement du plan pour qu’il entre dans la rotation : le générateur l’utilisera automatiquement, et le bouton 🎲 le proposera.
+### Charges rapides
 
-### Modifier les plans
+`KB_LOADS` et `BAND_LOADS` dans `js/data.js`.
 
-`PLANS` (toujours dans `js/data.js`) : chaque jour contient `kb` et `band`, des listes ordonnées de cibles. La durée choisie prend les N premiers emplacements — `kb` d’abord, puis `band`. Pour la 60 min, il faut 5 cibles `kb` et 3 cibles `band` qui possèdent assez d’exercices.
+### Durées / plans / phrases / couleurs
 
-### Modifier les phrases
-
-Tableau `QUOTES` dans `js/data.js`. Ajoute ou retire des phrases librement ; le tirage s’adapte.
-
-### Modifier les durées
-
-Tableau `DURATIONS` dans `js/app.js` : `kb`, `band`, `sets`, `rest` et texte d’aide.
-
-### Changer les couleurs
-
-Variables CSS en haut de `css/app.css` : `--bg`, `--card`, `--orange`, `--amber`, `--blue`, `--violet`, `--kb-grad`, `--band-grad`.
+- `DURATIONS` dans `js/app.js` ;
+- `PLANS` et `QUOTES` dans `js/data.js` ;
+- variables CSS en haut de `css/app.css` (`--amber`, `--blue`, `--violet`, `--kb-grad`, `--band-grad`).
 
 ---
 
-## 8. Notes techniques
+## 10. Notes techniques
 
-- **Aucune dépendance**, aucun bundler, aucun cookie, aucun tracker.
-- `target` minimum : Chrome/Edge/Firefox/Safari récents. `navigator.vibrate` et Web Audio sont utilisés avec des garde-fous (vibration absente sur iOS, bip silencieux si le navigateur bloque l’audio).
-- Le minuteur utilise une échéance `Date.now()` : il reste juste même si l’onglet passe en arrière-plan (l’intervalle peut être ralenti, l’affichage se resynchronise au retour).
-- Les séances sont générées de façon **déterministe** à partir de la semaine ISO, du jour, de la durée et de la variante : recharger la page ne change pas les exercices. Le bouton 🎲 ou un changement de semaine régénère.
-- Le service worker ne met en cache que les requêtes `GET`. Sur GitHub Pages, vérifie que les GIFs se chargent bien depuis `raw.githubusercontent.com` (CORS `*`, compatible avec le cache d’images opaque).
-- Le mode guidé demande le plein écran (`requestFullscreen`) et un Wake Lock ; si le navigateur refuse (iOS notamment), l’overlay plein écran et le décompte fonctionnent quand même.
-- Le guidage GIF est un support pédagogique : pour tout débutant, privilégie des charges légères et un avis professionnel en cas de douleur.
+- Aucune dépendance, aucun cookie, aucun tracker.
+- Web Audio + `navigator.vibrate` avec garde-fous (iOS).
+- Le minuteur utilise `Date.now()` : juste même en arrière-plan.
+- Génération déterministe par semaine ISO/jour/durée/variante ; le bouton 🎲 régénère.
+- Cache GIFs : `ironband-gifs-v1`, partagé entre la page (pré-téléchargement) et le service worker (interception).
+- Les GIFs restent un support pédagogique : charges légères et avis professionnel en cas de douleur.
 
 ---
 
-## 9. Licence
+## 11. Licence
 
-- Code et textes de ce dépôt : licence MIT — voir `LICENSE`.
-- Médias (GIF/miniatures) : © Gym visual, via le dataset `hasaneyldrm/exercises-dataset`, avec le crédit affiché dans l’application. Voir les conditions de Gym visual avant toute réutilisation hors de ce projet.
+- Code et textes : MIT — voir `LICENSE`.
+- Médias GIF/miniatures : © Gym visual via `hasaneyldrm/exercises-dataset`, crédit affiché dans l’application.
