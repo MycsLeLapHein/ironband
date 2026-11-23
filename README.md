@@ -10,14 +10,18 @@ Application web installable (PWA) pour un programme hybride de prise de masse au
 
 | Écran | Contenu |
 |---|---|
-| **Séance** | Séance du jour, 4 durées (15/30/45/60 min), 3 variantes (Semaine A/B/C), bouton « Varier les exercices 🎲 », échauffement et étirements dépliables, coche des séries, **carnet de charges**, validation |
-| **Séance guidée** | Mode plein écran pas à pas : une série à la fois, GIF en grand, repos automatique, série suivante, bilan et validation |
+| **Séance** | Séance du jour, 4 durées (15/30/45/60 min), 3 variantes (Semaine A/B/C), bouton « Varier les exercices 🎲 », échauffement et étirements dépliables, coche des séries, **carnet de charges**, **GIF agrandissable au clic**, validation |
+| **Séance guidée** | Mode plein écran pas à pas : une série à la fois, GIF en grand (cliquable pour zoomer), repos automatique, série suivante, bilan et validation |
 | **Programme** | Les 7 jours, statut de chaque séance, variantes, 7 règles de prise de masse, accès au téléchargement des GIFs hors-ligne |
 | **Biblio** | 50 exercices filtrables par matériel (Tout / Kettlebell / Bandes), par muscle et par recherche |
 | **Technique** | GIF en grand, **sélecteur de charge**, position de départ, exécution pas à pas, tempo, erreur de débutant, guide des charges |
 | **Hors-ligne** | GIFs en cache-first, pré-téléchargement en un clic avec barre de progression, secours textuel si un GIF manque |
 | **Minuteur** | Panneau flottant 45/60/90 s, anneau, vibration + bip à 0 s |
 | **PWA** | Manifest, icônes, service worker, bouton « Installer l’app », mode standalone |
+
+### Zoom des démonstrations
+
+Un clic (ou un tap) sur **n’importe quel GIF** — carte de séance, bibliothèque, mode guidé — ouvre un **zoom plein écran** sur fond sombre : démonstration en grand, nom et groupe musculaire, bouton **« Voir la technique »** et fermeture par ✕, clic sur le fond ou `Échap`.
 
 ### Le mot du jour
 
@@ -102,7 +106,7 @@ Toutes les URL sont relatives (`./`) : l’app fonctionne à la racine d’un do
 Modifie les fichiers puis incrémente la version du cache en haut de `sw.js` :
 
 ```js
-const CACHE_VERSION = 'ironband-v1.2.1';
+const CACHE_VERSION = 'ironband-v1.2.2';
 ```
 
 Le service worker supprime les anciens caches au chargement suivant (le cache `ironband-gifs-v1` est conservé).

@@ -6,7 +6,7 @@
    Pour publier une mise à jour : incrémente CACHE_VERSION.
    ========================================================================= */
 
-const CACHE_VERSION = 'ironband-v1.2.0';
+const CACHE_VERSION = 'ironband-v1.2.1';
 const RUNTIME_CACHE = 'ironband-runtime';
 const GIF_CACHE = 'ironband-gifs-v1';
 const GIF_HOST = 'raw.githubusercontent.com';
