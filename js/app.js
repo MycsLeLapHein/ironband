@@ -9,7 +9,7 @@
 
 const STORE_KEY = 'ironband.v1';
 const LEGACY_STORE_KEYS = ['ketofit.v1', 'kettleband.v1'];
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.2.1';
 
 const GIF_CACHE_NAME = 'ironband-gifs-v1';
 const GIF_URLS = [...new Set(EXERCISES.map((ex) => GIF_BASE + ex.gif))];
@@ -558,7 +558,7 @@ function renderWeekBadge() {
 
 function gifTag(ex, cls, altSuffix = '', context = 'card') {
   const alt = `Démonstration animée : ${ex.name}${altSuffix}`;
-  return `<img class="${cls}" src="${GIF_BASE}${ex.gif}" alt="${esc(alt)}" loading="lazy" decoding="async" data-ex="${ex.id}" data-context="${context}" onerror="ironbandGifFallback(this)">`;
+  return `<img class="${cls}" src="${GIF_BASE}${ex.gif}" alt="${esc(alt)}" title="Agrandir la démonstration" loading="lazy" decoding="async" data-ex="${ex.id}" data-context="${context}" onerror="ironbandGifFallback(this)">`;
 }
 
 function exerciseCardHTML(ex, idx, duration, key) {
@@ -873,6 +873,43 @@ const FALLBACK_GIF = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
   <circle cx="120" cy="148" r="34" fill="#ffb02e" opacity=".55"/>
   <text x="120" y="208" text-anchor="middle" fill="#9aa4b2" font-family="system-ui,sans-serif" font-size="14" font-weight="600">Aperçu GIF indisponible</text>
 </svg>`)}`;
+
+/* ------------------------------ Zoom des GIFs ---------------------------- */
+
+function openGifZoom(ex) {
+  if (!ex) return;
+  const root = $('#lightboxRoot');
+  if (!root) return;
+  const isBand = ex.equipment === 'band';
+  root.innerHTML = `
+    <div class="lightbox" role="dialog" aria-modal="true" aria-label="Démonstration agrandie : ${esc(ex.name)}">
+      <button type="button" class="lightbox-close" data-act="close-zoom" aria-label="Fermer la démonstration">✕</button>
+      <figure class="lightbox-figure">
+        ${gifTag(ex, 'lightbox-gif', '', 'modal')}
+        <figcaption class="lightbox-caption">
+          <span class="badge ${isBand ? 'band' : 'kb'}">${isBand ? 'Bandes' : 'Kettlebell'}</span>
+          <span class="badge soft">${esc(ex.group)}</span>
+          <strong>${esc(ex.name)}</strong>
+        </figcaption>
+      </figure>
+      <div class="lightbox-actions">
+        <button type="button" class="primary-btn" data-act="zoom-technique" data-id="${ex.id}">Voir la technique</button>
+        <button type="button" class="ghost-btn" data-act="close-zoom">Fermer</button>
+      </div>
+    </div>`;
+  root.hidden = false;
+  document.body.classList.add('lightbox-open');
+  const close = root.querySelector('.lightbox-close');
+  if (close) close.focus({ preventScroll: true });
+}
+
+function closeGifZoom() {
+  const root = $('#lightboxRoot');
+  if (!root || root.hidden) return;
+  root.hidden = true;
+  root.innerHTML = '';
+  document.body.classList.remove('lightbox-open');
+}
 
 function openTechnique(id) {
   const ex = byId[id];
@@ -1829,6 +1866,17 @@ function renderWeekBiblio() {
 function bindEvents() {
   document.addEventListener('click', (event) => {
     primeAudio();
+
+    // Clic sur un GIF de séance ou du mode guidé → zoom plein écran
+    const zoomImg = event.target.closest('img.ex-gif, img.guided-gif');
+    if (zoomImg && zoomImg.dataset.ex) {
+      const ex = byId[zoomImg.dataset.ex];
+      if (ex) {
+        openGifZoom(ex);
+        return;
+      }
+    }
+
     const target = event.target.closest('[data-act]');
     if (!target) return;
     const act = target.dataset.act;
@@ -1870,6 +1918,15 @@ function bindEvents() {
       case 'clear-load':
         clearLoad(target.dataset.ex);
         break;
+      case 'close-zoom':
+        closeGifZoom();
+        break;
+      case 'zoom-technique': {
+        const id = target.dataset.id;
+        closeGifZoom();
+        openTechnique(id);
+        break;
+      }
       case 'offline':
         openOfflineModal();
         break;
@@ -1931,10 +1988,16 @@ function bindEvents() {
 
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      if (guided.open) closeGuided();
+      if (!$('#lightboxRoot').hidden) closeGifZoom();
+      else if (guided.open) closeGuided();
       else if ($('#modalRoot').children.length) closeModal();
       else if (!$('#timerPanel').hidden) closeTimerPanel();
     }
+  });
+
+  // Fermeture du zoom en cliquant sur le fond
+  $('#lightboxRoot').addEventListener('click', (event) => {
+    if (event.target.classList.contains('lightbox')) closeGifZoom();
   });
 
   // Fermeture de la modale en cliquant sur le fond
@@ -1966,6 +2029,16 @@ function bindEvents() {
   });
 
   $('#libGrid').addEventListener('click', (event) => {
+    const gif = event.target.closest('img.lib-gif');
+    if (gif && gif.dataset.ex) {
+      event.preventDefault();
+      event.stopPropagation();
+      const ex = byId[gif.dataset.ex];
+      if (ex) {
+        openGifZoom(ex);
+        return;
+      }
+    }
     const card = event.target.closest('button[data-lib]');
     if (card) openTechnique(card.dataset.lib);
   });
