@@ -1442,6 +1442,94 @@ body.modal-open { overflow: hidden; }
 .timer-actions .ghost-btn { flex: 1; }
 .timer-actions .primary-btn.slim { flex: 1; }
 
+/* ============================ Zoom des GIFs =========================== */
+
+.ex-gif, .lib-gif, .guided-gif { cursor: zoom-in; }
+.ex-gif:active, .lib-gif:active, .guided-gif:active { opacity: .9; }
+
+body.lightbox-open { overflow: hidden; }
+
+.lightbox-root { position: relative; z-index: 300; }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: calc(18px + env(safe-area-inset-top)) 16px calc(18px + var(--safe-b));
+  background: rgba(4, 6, 10, .92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn .18s ease both;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  right: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card-2);
+  color: var(--text);
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+}
+
+.lightbox-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-height: 0;
+}
+
+.lightbox-gif {
+  width: min(88vw, 480px);
+  max-height: 62vh;
+  object-fit: contain;
+  aspect-ratio: 1 / 1;
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .65);
+  animation: zoomIn .2s cubic-bezier(.2, .8, .25, 1) both;
+}
+@keyframes zoomIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+
+.lightbox-figure .gif-fallback-large { margin: 0; width: min(88vw, 480px); max-height: 62vh; overflow-y: auto; }
+
+.lightbox-caption {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90vw;
+  text-align: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.lightbox-caption strong {
+  font-size: 15px;
+  line-height: 1.3;
+  letter-spacing: -.01em;
+}
+
+.lightbox-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+}
+.lightbox-actions .primary-btn { margin: 0; flex: 1.4; }
+.lightbox-actions .ghost-btn { flex: 1; }
+
 /* ========================== Carnet de charges ========================= */
 
 .load-block {
